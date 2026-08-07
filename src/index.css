@@ -252,3 +252,40 @@ body {
   --semi-color-primary-hover: #ffbd38;
   --semi-color-primary-active: #e69a00;
 }
+
+
+/* Tandem dark theme — exact tokens from the Tandem web app:
+   amber #FFAC02 on forest green (#041C1B bg, #0B201F surface, #122826
+   elevated), cream text #F5F0DC, borders #5A6455. Tailwind v4 utilities and
+   Semi-UI both resolve through CSS variables, so overriding them here
+   re-skins the whole editor in dark mode. */
+body[theme-mode="dark"] {
+  --color-zinc-950: #041c1b;
+  --color-zinc-900: #0b201f;
+  --color-zinc-800: #122826;
+  --color-zinc-700: #1c332f;
+  --color-zinc-600: #5a6455;
+  --color-zinc-400: #b9c4b9;
+  --color-zinc-300: #d9d9c9;
+  --color-zinc-200: #f5f0dc;
+  --color-zinc-100: #f5f0dc;
+  --color-gray-400: #5a6455;
+  --color-blue-500: #ffac02;
+  --color-sky-500: #ffbd38;
+
+  --semi-color-bg-0: #041c1b;
+  --semi-color-bg-1: #0b201f;
+  --semi-color-bg-2: #122826;
+  --semi-color-bg-3: #122826;
+  --semi-color-bg-4: #1c332f;
+  --semi-color-border: #5a6455;
+  --semi-color-fill-0: rgba(255, 172, 2, 0.08);
+  --semi-color-fill-1: rgba(255, 172, 2, 0.14);
+  --semi-color-fill-2: rgba(255, 172, 2, 0.2);
+  --semi-color-text-0: #f5f0dc;
+  --semi-color-text-1: #e8e3cf;
+  --semi-color-text-2: #b9c4b9;
+  --semi-color-text-3: #8a968a;
+  --semi-color-nav-bg: #0b201f;
+  --semi-color-success: #6ec88c;
+}

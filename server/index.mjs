@@ -222,7 +222,7 @@ app.post("/api/diagram", (req, res) => {
     ok: true,
     shareId: id,
     url: `${PUBLIC_URL}/editor?shareId=${id}`,
-    embedUrl: `${PUBLIC_URL}/editor?shareId=${id}&hideHeader=force&hideSidebar=force&hideToolbar=force`,
+    embedUrl: `${PUBLIC_URL}/editor?shareId=${id}&hideHeader=force&hideSidebar=force&hideToolbar=force&theme=dark`,
     tables: (diagram.tables || []).length,
     relationships: (diagram.relationships || []).length,
   });
