@@ -245,3 +245,10 @@
   animation: dash-right 1s linear infinite;
   
 }
+
+/* Tandem Schema brand accent — amber on forest green */
+body {
+  --semi-color-primary: #ffac02;
+  --semi-color-primary-hover: #ffbd38;
+  --semi-color-primary-active: #e69a00;
+}

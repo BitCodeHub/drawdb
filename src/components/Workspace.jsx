@@ -501,7 +501,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   }, [saveState, layout, save]);
 
   useEffect(() => {
-    document.title = "Editor | drawDB";
+    document.title = "Editor | Tandem Schema";
 
     load();
   }, [load]);

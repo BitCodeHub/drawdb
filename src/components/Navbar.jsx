@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import logo from "../assets/logo_light_160.png";
 import { SideSheet } from "@douyinfe/semi-ui";
 import { IconMenu } from "@douyinfe/semi-icons";
-import { socials } from "../data/socials";
 
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(false);
@@ -12,77 +11,29 @@ export default function Navbar() {
     <>
       <div className="py-4 px-12 sm:px-4 flex justify-between items-center">
         <div className="flex items-center justify-between w-full">
-          <Link to="/">
-            <img src={logo} alt="logo" className="h-[48px] sm:h-[32px]" />
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src={logo}
+              alt="Tandem Schema"
+              className="h-[40px] sm:h-[28px]"
+            />
+            <span className="text-lg font-bold">
+              Tandem <span style={{ color: "#FFAC02" }}>Schema</span>
+            </span>
           </Link>
           <div className="md:hidden flex gap-12">
             <Link
-              className="text-lg font-semibold hover:text-sky-800 transition-colors duration-300"
-              onClick={() =>
-                document
-                  .getElementById("features")
-                  .scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              Features
-            </Link>
-            <Link
               to="/editor"
-              className="text-lg font-semibold hover:text-sky-800 transition-colors duration-300"
+              className="text-lg font-semibold hover:opacity-70 transition-opacity duration-300"
             >
               Editor
             </Link>
             <Link
               to="/templates"
-              className="text-lg font-semibold hover:text-sky-800 transition-colors duration-300"
+              className="text-lg font-semibold hover:opacity-70 transition-opacity duration-300"
             >
               Templates
             </Link>
-            <Link
-              to={socials.docs}
-              className="text-lg font-semibold hover:text-sky-800 transition-colors duration-300"
-            >
-              Docs
-            </Link>
-          </div>
-          <div className="md:hidden block space-x-3 ms-12">
-            <a
-              title="Jump to Github"
-              className="px-2 py-2 hover:opacity-60 transition-all duration-300 rounded-full text-2xl"
-              href={socials.github}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <i className="opacity-70 bi bi-github" />
-            </a>
-            <a
-              title="Follow us on X"
-              className="px-2 py-2 hover:opacity-60 transition-all duration-300 rounded-full text-2xl"
-              href={socials.twitter}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <i className="opacity-70 bi bi-twitter-x" />
-            </a>
-            <a
-              title="Join the community on Discord"
-              className="px-2 py-2 hover:opacity-60 transition-all duration-300 rounded-full text-2xl"
-              href={socials.discord}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <i className="opacity-70 bi bi-discord" />
-            </a>
-            <a
-              title="Sponsor on GitHub"
-              className="p-1 px-1.5 relative flex-inline items-center justify-center hover:opacity-60 bg-white transition-all duration-300 rounded-full text-xl"
-              href={socials.sponsor}
-              target="_blank"
-              rel="noreferrer"
-            >
-               <i className="fa-solid fa-heart text-rose-300" />
-               <i className="absolute top-1.5 left-1.5 fa-regular fa-heart text-rose-400" />
-            </a>
           </div>
         </div>
         <button
@@ -95,24 +46,16 @@ export default function Navbar() {
       <hr />
       <SideSheet
         title={
-          <img src={logo} alt="logo" className="sm:h-[32px] md:h-[42px]" />
+          <img
+            src={logo}
+            alt="Tandem Schema"
+            className="sm:h-[32px] md:h-[42px]"
+          />
         }
         visible={openMenu}
         onCancel={() => setOpenMenu(false)}
         width={window.innerWidth}
       >
-        <Link
-          className="hover:bg-zinc-100 block p-3 text-base font-semibold"
-          onClick={() => {
-            document
-              .getElementById("features")
-              .scrollIntoView({ behavior: "smooth" });
-            setOpenMenu(false);
-          }}
-        >
-          Features
-        </Link>
-        <hr />
         <Link
           to="/editor"
           className="hover:bg-zinc-100 block p-3 text-base font-semibold"
@@ -125,20 +68,6 @@ export default function Navbar() {
           className="hover:bg-zinc-100 block p-3 text-base font-semibold"
         >
           Templates
-        </Link>
-        <hr />
-        <Link
-          to={socials.docs}
-          className="hover:bg-zinc-100 block p-3 text-base font-semibold"
-        >
-          Docs
-        </Link>
-        <hr />
-        <Link
-          to={socials.sponsor}
-          className="hover:bg-zinc-100 block p-3 text-base font-semibold"
-        >
-          Sponsor
         </Link>
       </SideSheet>
     </>

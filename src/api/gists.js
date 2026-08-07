@@ -5,10 +5,12 @@ export const VERSION_FILENAME = "versionned.json";
 
 const description = "drawDB diagram";
 
+// Default to same-origin: the Tandem Schema server hosts both the SPA and
+// the /gists share API, so relative URLs work everywhere it's reachable.
 const baseUrl =
   import.meta.env.VITE_GIST_BACKEND_URL ||
   import.meta.env.VITE_BACKEND_URL ||
-  "http://localhost:5000";
+  "";
 
 export async function create(filename, content) {
   const res = await axios.post(`${baseUrl}/gists`, {

@@ -2,7 +2,7 @@ import Dexie from "dexie";
 import { v4 as uuidv4 } from "uuid";
 import { templateSeeds } from "./seeds";
 
-export const db = new Dexie("drawDB");
+export const db = new Dexie("TandemSchema");
 
 db.version(67)
   .stores({

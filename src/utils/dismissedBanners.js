@@ -1,4 +1,4 @@
-const DISMISSED_BANNERS_KEY = "drawdb:dismissedBanners";
+const DISMISSED_BANNERS_KEY = "tandemschema:dismissedBanners";
 
 export function readDismissedBanners() {
   try {

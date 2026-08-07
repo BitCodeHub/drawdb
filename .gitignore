@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+server/data/
+server/lib.mjs
+server/server-bundle.mjs

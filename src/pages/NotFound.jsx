@@ -12,7 +12,7 @@ export default function NotFound() {
           docs
         </a>
         ,{" "}
-        <a className="text-blue-600" href="mailto:drawdb@outlook.com">
+        <a className="text-blue-600" href="https://tandemapp.agentlumi.cloud">
           shoot us an email
         </a>{" "}
         or{" "}
