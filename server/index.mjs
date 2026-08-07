@@ -183,16 +183,29 @@ app.post("/api/diagram", (req, res) => {
     });
   }
 
+  // transform.pan is the viewport CENTER (viewBox.left = pan.x - width/2),
+  // so aim it at the middle of the arranged tables for a centered first view.
+  const tables = diagram.tables || [];
+  let pan = { x: 0, y: 0 };
+  if (tables.length) {
+    const xs = tables.map((t) => t.x);
+    const ys = tables.map((t) => t.y);
+    pan = {
+      x: (Math.min(...xs) + Math.max(...xs)) / 2 + 110,
+      y: (Math.min(...ys) + Math.max(...ys)) / 2 + 80,
+    };
+  }
+
   const content = JSON.stringify({
     title,
-    tables: diagram.tables || [],
+    tables,
     relationships: diagram.relationships || [],
     notes: [],
     subjectAreas: [],
     database: db,
     types: diagram.types || [],
     enums: diagram.enums || [],
-    transform: { pan: { x: 0, y: 0 }, zoom: 1 },
+    transform: { pan, zoom: 1 },
   });
 
   const id = randomUUID();
@@ -209,7 +222,7 @@ app.post("/api/diagram", (req, res) => {
     ok: true,
     shareId: id,
     url: `${PUBLIC_URL}/editor?shareId=${id}`,
-    embedUrl: `${PUBLIC_URL}/editor?shareId=${id}&hideHeader=1&hideSidebar=1`,
+    embedUrl: `${PUBLIC_URL}/editor?shareId=${id}&hideHeader=force&hideSidebar=force&hideToolbar=force`,
     tables: (diagram.tables || []).length,
     relationships: (diagram.relationships || []).length,
   });
