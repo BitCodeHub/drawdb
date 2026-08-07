@@ -283,6 +283,29 @@ export async function rehearse(sql, expectedTables) {
 
 // ---------------------------------------------------------------- migrate
 
+// Identifier/type validation for SQL we assemble ourselves. Diagrams are
+// user-supplied JSON (the share API is open by design), so nothing from a
+// diagram may reach a SQL string unless it matches these shapes.
+const IDENT_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const TYPE_RE = /^[a-zA-Z_][a-zA-Z0-9_ ]*$/; // e.g. VARCHAR, DOUBLE PRECISION
+const SIZE_RE = /^[0-9]+(,[0-9]+)?$/;
+
+export function assertSafeIdent(name, what) {
+  if (!IDENT_RE.test(String(name))) {
+    throw new Error(`Unsafe ${what} identifier rejected: ${JSON.stringify(String(name).slice(0, 60))}`);
+  }
+  return name;
+}
+
+function assertSafeType(field) {
+  if (!TYPE_RE.test(String(field.type))) {
+    throw new Error(`Unsafe SQL type rejected on "${field.name}": ${JSON.stringify(String(field.type).slice(0, 60))}`);
+  }
+  if (field.size !== undefined && field.size !== "" && !SIZE_RE.test(String(field.size))) {
+    throw new Error(`Unsafe type size rejected on "${field.name}"`);
+  }
+}
+
 const TYPE_FAMILY = {
   integer: "int", bigint: "int", smallint: "int", serial: "int",
   "character varying": "text", character: "text", text: "text", varchar: "text",
@@ -298,50 +321,63 @@ function familyOf(type) {
 }
 
 function diagramFieldSql(field) {
-  const size = field.size ? `(${field.size})` : "";
-  return `${field.name} ${field.type}${size}${field.notNull ? " NOT NULL" : ""}`;
+  assertSafeIdent(field.name, "column");
+  assertSafeType(field);
+  const size = field.size && SIZE_RE.test(String(field.size)) ? `(${field.size})` : "";
+  return `"${field.name}" ${field.type}${size}${field.notNull ? " NOT NULL" : ""}`;
 }
 
 // Diff live DB vs diagram → { additive: [sql], destructive: [{sql, why}] }.
+// Every identifier — from the diagram AND from introspection — is validated
+// before being embedded, and embedded double-quoted.
 export function planMigration(live, diagram) {
   const additive = [];
   const destructive = [];
   const dTables = {};
-  for (const t of diagram.tables || []) dTables[t.name.toLowerCase()] = t;
+  for (const t of diagram.tables || []) {
+    assertSafeIdent(t.name, "table");
+    dTables[t.name.toLowerCase()] = t;
+  }
 
   for (const [name, t] of Object.entries(dTables)) {
     if (!live[name]) {
       const fields = (t.fields || []).map(diagramFieldSql).join(", ");
-      const pks = (t.fields || []).filter((f) => f.primary).map((f) => f.name);
+      const pks = (t.fields || [])
+        .filter((f) => f.primary)
+        .map((f) => `"${assertSafeIdent(f.name, "column")}"`);
       additive.push(
-        `CREATE TABLE ${name} (${fields}${pks.length ? `, PRIMARY KEY (${pks.join(", ")})` : ""})`,
+        `CREATE TABLE "${name}" (${fields}${pks.length ? `, PRIMARY KEY (${pks.join(", ")})` : ""})`,
       );
       continue;
     }
     for (const f of t.fields || []) {
+      assertSafeIdent(f.name, "column");
       const liveType = live[name][f.name];
       if (liveType === undefined) {
-        additive.push(`ALTER TABLE ${name} ADD COLUMN ${diagramFieldSql(f)}`);
+        additive.push(`ALTER TABLE "${name}" ADD COLUMN ${diagramFieldSql(f)}`);
       } else if (familyOf(liveType) !== familyOf(f.type)) {
+        assertSafeType(f);
         destructive.push({
-          sql: `ALTER TABLE ${name} ALTER COLUMN ${f.name} TYPE ${f.type}`,
+          sql: `ALTER TABLE "${name}" ALTER COLUMN "${f.name}" TYPE ${f.type}`,
           why: `changes ${name}.${f.name} from ${liveType} to ${f.type} — existing data may not convert`,
         });
       }
     }
     for (const col of Object.keys(live[name])) {
+      assertSafeIdent(col, "live column");
       if (!(t.fields || []).some((f) => f.name.toLowerCase() === col.toLowerCase())) {
         destructive.push({
-          sql: `ALTER TABLE ${name} DROP COLUMN ${col}`,
+          sql: `ALTER TABLE "${name}" DROP COLUMN "${col}"`,
           why: `deletes column ${name}.${col} and ALL data stored in it`,
         });
       }
     }
   }
   for (const name of Object.keys(live)) {
+    assertSafeIdent(name, "live table");
     if (!dTables[name]) {
       destructive.push({
-        sql: `DROP TABLE ${name} CASCADE`,
+        sql: `DROP TABLE "${name}" CASCADE`,
         why: `deletes table ${name}, ALL its rows, and every link other tables have to it`,
       });
     }

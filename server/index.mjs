@@ -292,10 +292,39 @@ function loadDiagram(shareId) {
 
 const DB_NAME_RE = /^[a-z][a-z0-9_]{2,40}$/;
 
+// The pipeline mutates real databases and records approvals, so unlike the
+// share API it is NOT public. Callers (Kai, the Argus watcher) present a
+// shared token; no token configured → the pipeline is disabled entirely.
+const PIPELINE_TOKEN = process.env.PIPELINE_TOKEN || "";
+function requirePipelineAuth(req, res, next) {
+  if (!PIPELINE_TOKEN) {
+    return res.status(503).json({ ok: false, error: "Pipeline disabled: PIPELINE_TOKEN not configured." });
+  }
+  const tok =
+    req.get("X-Pipeline-Token") ||
+    (req.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  if (tok !== PIPELINE_TOKEN) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+  next();
+}
+
+// Diagrams are user-supplied JSON; nothing reaches a SQL string without
+// passing lint (which enforces safe identifiers) — on every entry point,
+// not just verify.
+function lintGate(diagram, res) {
+  const errors = lintDiagram(diagram).filter((i) => i.level === "error");
+  if (errors.length > 0) {
+    res.status(422).json({ ok: false, error: "Diagram failed lint", lint: errors });
+    return false;
+  }
+  return true;
+}
+
 // POST /api/diagram/verify { shareId }
 // Lint + round-trip + scratch rehearsal. Every step is reported to the room
 // via pipeline events; the rehearsal DDL is governed by Argus first.
-app.post("/api/diagram/verify", async (req, res) => {
+app.post("/api/diagram/verify", requirePipelineAuth, async (req, res) => {
   const { shareId = "" } = req.body || {};
   const diagram = loadDiagram(shareId);
   if (!diagram) return res.status(404).json({ ok: false, error: "Unknown shareId" });
@@ -341,12 +370,13 @@ app.post("/api/diagram/verify", async (req, res) => {
 // POST /api/diagram/provision { shareId, name, env: "staging"|"prod" }
 // Creates database app_<name>_<env> from the diagram. Prod requires an
 // approval id from the room flow.
-app.post("/api/diagram/provision", async (req, res) => {
+app.post("/api/diagram/provision", requirePipelineAuth, async (req, res) => {
   const { shareId = "", name = "", env = "staging", approvalId = "" } = req.body || {};
   const diagram = loadDiagram(shareId);
   if (!diagram) return res.status(404).json({ ok: false, error: "Unknown shareId" });
   if (!DB_NAME_RE.test(name)) return res.status(400).json({ ok: false, error: "name must match ^[a-z][a-z0-9_]{2,40}$" });
   if (!["staging", "prod"].includes(env)) return res.status(400).json({ ok: false, error: "env must be staging or prod" });
+  if (!lintGate(diagram, res)) return;
   const title = diagram.title || shareId;
   const dbName = `app_${name}_${env}`;
 
@@ -396,13 +426,14 @@ app.post("/api/diagram/provision", async (req, res) => {
 // Argus allows them; destructive changes are blocked until an owner approval
 // exists AND are individually submitted to Argus so the block/override is on
 // the ledger.
-app.post("/api/diagram/migrate", async (req, res) => {
+app.post("/api/diagram/migrate", requirePipelineAuth, async (req, res) => {
   const { shareId = "", name = "", env = "staging", approvalId = "" } = req.body || {};
   const diagram = loadDiagram(shareId);
   if (!diagram) return res.status(404).json({ ok: false, error: "Unknown shareId" });
   if (!DB_NAME_RE.test(name)) return res.status(400).json({ ok: false, error: "bad name" });
   const dbName = `app_${name}_${env}`;
   const title = diagram.title || shareId;
+  if (!lintGate(diagram, res)) return;
   if (!(await dbExists(dbName))) return res.status(404).json({ ok: false, error: `${dbName} does not exist — provision first` });
 
   const live = await introspect(dbName);
@@ -464,12 +495,12 @@ app.post("/api/diagram/migrate", async (req, res) => {
 });
 
 // Pipeline plumbing for the room watcher.
-app.get("/api/pipeline/events", (req, res) => {
+app.get("/api/pipeline/events", requirePipelineAuth, (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ ok: true, events: readEvents(req.query.since || null) });
 });
 
-app.post("/api/pipeline/approve", (req, res) => {
+app.post("/api/pipeline/approve", requirePipelineAuth, (req, res) => {
   const { approvalId = "", approvedBy = "owner" } = req.body || {};
   const approval = grantApproval(approvalId, approvedBy);
   if (!approval) return res.status(404).json({ ok: false, error: "Unknown approvalId" });
