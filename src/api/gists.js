@@ -3,7 +3,7 @@ import axios from "axios";
 export const SHARE_FILENAME = "share.json";
 export const VERSION_FILENAME = "versionned.json";
 
-const description = "drawDB diagram";
+const description = "Tandem Schema diagram";
 
 // Default to same-origin: the Tandem Schema server hosts both the SPA and
 // the /gists share API, so relative URLs work everywhere it's reachable.

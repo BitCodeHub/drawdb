@@ -76,6 +76,8 @@ app.post("/gists", (req, res) => {
 app.get("/gists/:id", (req, res) => {
   const gist = readGist(req.params.id);
   if (!gist) return res.status(404).json({ error: "Not found" });
+  // Agents update diagrams in place; embeds must always see the latest.
+  res.setHeader("Cache-Control", "no-store");
   res.json({ data: gist });
 });
 
@@ -137,11 +139,20 @@ const DB_ALIASES = {
 };
 
 // POST /api/diagram
-// body: { sql?: string, dbml?: string, database?: string, title?: string }
-// resp: { ok, shareId, url, embedUrl, tables, relationships }
+// body: { sql?: string, dbml?: string, database?: string, title?: string,
+//         shareId?: string }
+// resp: { ok, shareId, url, embedUrl, tables, relationships, updated }
+// Passing an existing shareId overwrites that diagram in place — the share
+// URL stays stable, so a chat embed of it shows the new version on reload.
+// This is how agents iterate on a diagram unlimited times.
 app.post("/api/diagram", (req, res) => {
-  const { sql = "", dbml = "", database = "postgres", title = "Untitled diagram" } =
-    req.body || {};
+  const {
+    sql = "",
+    dbml = "",
+    database = "postgres",
+    title = "Untitled diagram",
+    shareId = "",
+  } = req.body || {};
 
   if (!sql && !dbml) {
     return res
@@ -208,19 +219,37 @@ app.post("/api/diagram", (req, res) => {
     transform: { pan, zoom: 1 },
   });
 
-  const id = randomUUID();
   const now = new Date().toISOString();
-  writeGist({
-    id,
-    description: `Tandem Schema diagram: ${title}`,
-    files: { "share.json": { content } },
-    created_at: now,
-    updated_at: now,
-  });
+  let id = randomUUID();
+  let updated = false;
+  if (shareId) {
+    const existing = readGist(shareId);
+    if (!existing) {
+      return res.status(404).json({
+        ok: false,
+        error: `shareId ${shareId} not found — omit shareId to create a new diagram.`,
+      });
+    }
+    id = existing.id;
+    updated = true;
+    existing.description = `Tandem Schema diagram: ${title}`;
+    existing.files["share.json"] = { content };
+    existing.updated_at = now;
+    writeGist(existing);
+  } else {
+    writeGist({
+      id,
+      description: `Tandem Schema diagram: ${title}`,
+      files: { "share.json": { content } },
+      created_at: now,
+      updated_at: now,
+    });
+  }
 
   res.json({
     ok: true,
     shareId: id,
+    updated,
     url: `${PUBLIC_URL}/editor?shareId=${id}`,
     embedUrl: `${PUBLIC_URL}/editor?shareId=${id}&hideHeader=force&hideSidebar=force&hideToolbar=force&theme=dark`,
     tables: (diagram.tables || []).length,

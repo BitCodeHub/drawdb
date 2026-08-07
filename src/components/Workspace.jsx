@@ -13,7 +13,13 @@ import ExtensionsContext, { Slot } from "../context/ExtensionsContext";
 import Canvas from "./EditorCanvas/Canvas";
 import { CanvasContextProvider } from "../context/CanvasContext";
 import SidePanel from "./EditorSidePanel/SidePanel";
-import { DB, State } from "../data/constants";
+import {
+  DB,
+  State,
+  tableHeaderHeight,
+  tableFieldHeight,
+  tableWidth as defaultTableWidth,
+} from "../data/constants";
 import { db } from "../data/db";
 import {
   useLayout,
@@ -105,6 +111,58 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
     const w = isRtl(i18n.language) ? window.innerWidth - e.clientX : e.clientX;
     if (w > SIDEPANEL_MIN_WIDTH) setWidth(w);
   };
+
+  // Zoom the viewport so every table fits on screen. Reachable from the
+  // toolbar host page via postMessage ("tandem-schema:fit") so chat embeds
+  // can offer a Fit button without opening the editor; also runs once
+  // automatically when loading chromeless (hideToolbar=force).
+  const fitView = useCallback(() => {
+    if (!tables || tables.length === 0) return;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const table of tables) {
+      const h =
+        tableHeaderHeight +
+        (table.fields?.length || 1) * tableFieldHeight;
+      const w = table.width || settings.tableWidth || defaultTableWidth;
+      minX = Math.min(minX, table.x);
+      minY = Math.min(minY, table.y);
+      maxX = Math.max(maxX, table.x + w);
+      maxY = Math.max(maxY, table.y + h);
+    }
+    const bw = Math.max(maxX - minX, 100);
+    const bh = Math.max(maxY - minY, 100);
+    const zoom = Math.min(
+      window.innerWidth / (bw * 1.15),
+      window.innerHeight / (bh * 1.2),
+      1.25,
+    );
+    setTransform({
+      zoom: Math.max(zoom, 0.05),
+      pan: { x: minX + bw / 2, y: minY + bh / 2 },
+    });
+  }, [tables, settings.tableWidth, setTransform]);
+
+  useEffect(() => {
+    const onMessage = (e) => {
+      const type = typeof e.data === "string" ? e.data : e.data?.type;
+      if (type === "tandem-schema:fit") fitView();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [fitView]);
+
+  const autoFitDone = useRef(false);
+  useEffect(() => {
+    if (autoFitDone.current) return;
+    if (searchParams.get("hideToolbar") !== "force") return;
+    if (!tables || tables.length === 0) return;
+    autoFitDone.current = true;
+    const id = setTimeout(fitView, 150);
+    return () => clearTimeout(id);
+  }, [tables, fitView, searchParams]);
 
   const buildCloudPayload = useCallback(
     (targetId) => ({
